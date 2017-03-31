@@ -43,8 +43,10 @@ public class LensView extends View {
     private Paint mPaintText;
     private Paint mPaintNewAppTag;
 
-    private float mTouchX = -Float.MAX_VALUE;
-    private float mTouchY = -Float.MAX_VALUE;
+    private float mZoomX = -Float.MAX_VALUE;
+    private float mZoomY = -Float.MAX_VALUE;
+    float lastX, lastY;
+
 
     private boolean mInsideRect = false;
     private RectF mRectToSelect = new RectF(0, 0, 0, 0);
@@ -111,6 +113,11 @@ public class LensView extends View {
         mSettings = new Settings(getContext());
         setupPaints();
         mWorkspaceBackgroundDrawable = (NinePatchDrawable) ContextCompat.getDrawable(getContext(), R.drawable.workspace_bg);
+
+        mZoomX = 500;
+        mZoomY = 900;
+        LensAnimation lensShowAnimation = new LensAnimation(true);
+        startAnimation(lensShowAnimation);
     }
 
     @Override
@@ -143,7 +150,7 @@ public class LensView extends View {
         mPaintText.setColor(ContextCompat.getColor(getContext(), R.color.colorWhite));
         mPaintText.setTextSize(getResources().getDimension(R.dimen.text_size_lens));
         mPaintText.setTextAlign(Paint.Align.CENTER);
-        mPaintText.setTypeface(Typeface.createFromAsset(getContext().getAssets(),"fonts/RobotoCondensed-Regular.ttf"));
+        mPaintText.setTypeface(Typeface.createFromAsset(getContext().getAssets(), "fonts/RobotoCondensed-Regular.ttf"));
 
         mPaintNewAppTag = new Paint();
         mPaintNewAppTag.setAntiAlias(true);
@@ -173,8 +180,8 @@ public class LensView extends View {
             }
         } else if (mDrawType == DrawType.CIRCLES) {
             mNumberOfCircles = 100;
-            mTouchX = getWidth() / 2;
-            mTouchY = getHeight() / 2;
+            mZoomX = getWidth() / 2;
+            mZoomY = getHeight() / 2;
             drawGrid(canvas, mNumberOfCircles);
         }
     }
@@ -182,47 +189,67 @@ public class LensView extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (mDrawType == DrawType.APPS) {
+            float x = event.getX();
+            float y = event.getY();
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN: {
-                    if (event.getX() < 0.0f) {
-                        mTouchX = 0.0f;
-                    } else {
-                        mTouchX = event.getX();
-                    }
-                    if (event.getY() < 0.0f) {
-                        mTouchY = 0.0f;
-                    } else {
-                        mTouchY = event.getY();
-                    }
-                    mSelectIndex = -1;
-                    LensAnimation lensShowAnimation = new LensAnimation(true);
-                    startAnimation(lensShowAnimation);
+//                    if (event.getX() < 0.0f) {
+//                        mZoomX = 0.0f;
+//                    } else {
+//                        mZoomX = event.getX();
+//                    }
+//                    if (event.getY() < 0.0f) {
+//                        mZoomY = 0.0f;
+//                    } else {
+//                        mZoomY = event.getY();
+//                    }
+//                    mSelectIndex = -1;
+//                    LensAnimation lensShowAnimation = new LensAnimation(true);
+//                    startAnimation(lensShowAnimation);
+                    lastX = event.getX();
+                    lastY = event.getY();
                     return true;
                 }
                 case MotionEvent.ACTION_MOVE: {
+//                    if (event.getX() < 0.0f) {
+//                        mZoomX = 0.0f;
+//                    } else {
+//                        mZoomX = event.getX();
+//                    }
+//                    if (event.getY() < 0.0f) {
+//                        mZoomY = 0.0f;
+//                    } else {
+//                        mZoomY = event.getY();
+//                    }
+//                    invalidate();
                     if (event.getX() < 0.0f) {
-                        mTouchX = 0.0f;
+                        mZoomX = 0.0f;
                     } else {
-                        mTouchX = event.getX();
                     }
                     if (event.getY() < 0.0f) {
-                        mTouchY = 0.0f;
+                        mZoomY = 0.0f;
                     } else {
-                        mTouchY = event.getY();
                     }
+
+                    lastX = event.getX();
+                    lastY = event.getY();
                     invalidate();
                     return true;
                 }
-                case MotionEvent.ACTION_UP: {
-                    performLaunchVibration();
-                    LensAnimation lensHideAnimation = new LensAnimation(false);
-                    startAnimation(lensHideAnimation);
-                    return true;
-                }
+//                case MotionEvent.ACTION_UP: {
+//                    performLaunchVibration();
+//                    LensAnimation lensHideAnimation = new LensAnimation(false);
+//                    startAnimation(lensHideAnimation);
+//                    return true;
+//                }
                 default: {
                     return super.onTouchEvent(event);
                 }
+//            }
+
+
             }
+
         }
         return super.onTouchEvent(event);
     }
@@ -236,7 +263,7 @@ public class LensView extends View {
     }
 
     private void drawTouchSelection(Canvas canvas) {
-        canvas.drawCircle(mTouchX, mTouchY, getResources().getDimension(R.dimen.radius_touch_selection), mPaintTouchSelection);
+        canvas.drawCircle(mZoomX, mZoomY, getResources().getDimension(R.dimen.radius_touch_selection), mPaintTouchSelection);
     }
 
     private void drawGrid(Canvas canvas, int itemCount) {
@@ -269,11 +296,11 @@ public class LensView extends View {
                         animationMultiplier = 1.0f;
                     }
 
-                    if (mTouchX >= 0 && mTouchY >= 0) {
-                        float shiftedCenterX = LensCalculator.shiftPoint(getContext(), mTouchX, rect.centerX(), getWidth(), animationMultiplier);
-                        float shiftedCenterY = LensCalculator.shiftPoint(getContext(), mTouchY, rect.centerY(), getHeight(), animationMultiplier);
-                        float scaledCenterX = LensCalculator.scalePoint(getContext(), mTouchX, rect.centerX(), rect.width(), getWidth(), animationMultiplier);
-                        float scaledCenterY = LensCalculator.scalePoint(getContext(), mTouchY, rect.centerY(), rect.height(), getHeight(), animationMultiplier);
+                    if (mZoomX >= 0 && mZoomY >= 0) {
+                        float shiftedCenterX = LensCalculator.shiftPoint(getContext(), mZoomX, rect.centerX(), getWidth(), animationMultiplier);
+                        float shiftedCenterY = LensCalculator.shiftPoint(getContext(), mZoomY, rect.centerY(), getHeight(), animationMultiplier);
+                        float scaledCenterX = LensCalculator.scalePoint(getContext(), mZoomX, rect.centerX(), rect.width(), getWidth(), animationMultiplier);
+                        float scaledCenterY = LensCalculator.scalePoint(getContext(), mZoomY, rect.centerY(), rect.height(), getHeight(), animationMultiplier);
                         float newSize = LensCalculator.calculateSquareScaledSize(scaledCenterX, shiftedCenterX, scaledCenterY, shiftedCenterY);
 
                         if (mSettings.getFloat(Settings.KEY_DISTORTION_FACTOR) > 0.0f && mSettings.getFloat(Settings.KEY_SCALE_FACTOR) > 0.0f) {
@@ -282,7 +309,7 @@ public class LensView extends View {
                             rect = LensCalculator.calculateRect(shiftedCenterX, shiftedCenterY, rect.width());
                         }
 
-                        if (LensCalculator.isInsideRect(mTouchX, mTouchY, rect)) {
+                        if (LensCalculator.isInsideRect(mZoomX, mZoomY, rect)) {
                             mInsideRect = true;
                             selectIndex = currentIndex;
                             mRectToSelect = rect;
@@ -418,8 +445,8 @@ public class LensView extends View {
                 public void onAnimationEnd(Animation animation) {
                     if (!mShow) {
                         launchApp();
-                        mTouchX = -Float.MAX_VALUE;
-                        mTouchY = -Float.MAX_VALUE;
+                        mZoomX = -Float.MAX_VALUE;
+                        mZoomY = -Float.MAX_VALUE;
                         mAnimationHiding = false;
                     } else {
                         mPaintText.setShadowLayer(
